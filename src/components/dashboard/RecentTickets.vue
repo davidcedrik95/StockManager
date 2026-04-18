@@ -83,6 +83,7 @@ const earningsItems = [
   { date: '2025-01-09 15:42', refNr: '100391', name: 'Angebot', kategorie: 'Online-Shop', status: 'In Planung' }
 ]
 
+
 const topCountries = [
   { name: 'Vereinigte Staaten', earnings: '$119,366.96' },
   { name: 'Australien', earnings: '$70,261.65' },
