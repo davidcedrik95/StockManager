@@ -6,6 +6,15 @@ export const useProductStore = defineStore('products', () => {
     { id: 1, name: 'Product A', stock: 15, purchasePrice: 10 },
     { id: 2, name: 'Product B', stock: 8, purchasePrice: 25 },
     { id: 3, name: 'Product C', stock: 0, purchasePrice: 5 },
+    { id: 1, name: 'Product A', stock: 15, purchasePrice: 10 },
+    { id: 2, name: 'Product B', stock: 8, purchasePrice: 25 },
+    { id: 3, name: 'Product C', stock: 0, purchasePrice: 5 },
+    { id: 1, name: 'Product A', stock: 15, purchasePrice: 10 },
+    { id: 2, name: 'Product B', stock: 8, purchasePrice: 25 },
+    { id: 3, name: 'Product C', stock: 0, purchasePrice: 5 },
+    { id: 1, name: 'Product A', stock: 15, purchasePrice: 10 },
+    { id: 2, name: 'Product B', stock: 8, purchasePrice: 25 },
+    { id: 3, name: 'Product C', stock: 0, purchasePrice: 5 },
   ])
 
   const totalProducts = computed(() => products.value.length)
