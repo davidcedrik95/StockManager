@@ -94,7 +94,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProductStore } from '../../stores/products'
+import { useProductStore } from '../../stores/stock_manager_products'
 import { useCustomerStore } from '../../stores/customers'
 import { useQuoteStore } from '../../stores/quotes'
 
@@ -103,23 +103,38 @@ const productStore = useProductStore()
 const customerStore = useCustomerStore()
 const quoteStore = useQuoteStore()
 
-// Daten aus den Stores
+// --- Produits ---
 const totalProducts = computed(() => productStore.products?.length || 0)
-const inStock = computed(() => productStore.products?.filter(p => p.stock > 0).length || 0)
-const totalCustomers = computed(() => customerStore.customers?.length || 0)
-const activeCustomers = computed(() => customerStore.customers?.filter(c => c.active !== false).length || 0)
-const pendingQuotes = computed(() => quoteStore.quotes?.filter(q => q.status === 'pending').length || 0)
-const totalQuotes = computed(() => quoteStore.quotes?.length || 0)
+// in_stock est un booléen (TRUE = en stock)
+const inStockCount = computed(() => 
+  productStore.products?.filter(p => p.in_stock === true || p.in_stock === 1).length || 0
+)
+// Valeur du stock basée sur le prix de vente (ou prix d'achat si vous l'ajoutez)
 const totalStockValue = computed(() =>
-  (productStore.products || []).reduce((sum, p) => sum + (p.purchasePrice * p.stock), 0)
+  (productStore.products || [])
+    .filter(p => p.in_stock === true || p.in_stock === 1)
+    .reduce((sum, p) => sum + (p.price || 0), 0)
 )
 const averageProductValue = computed(() =>
-  totalProducts.value > 0 ? totalStockValue.value / totalProducts.value : 0
+  inStockCount.value > 0 ? totalStockValue.value / inStockCount.value : 0
 )
 
-// Prozentsätze für Fortschrittsbalken
+// --- Clients ---
+const totalCustomers = computed(() => customerStore.customers?.length || 0)
+// Supposons que chaque client a une propriété `active` (booléen)
+const activeCustomers = computed(() => 
+  customerStore.customers?.filter(c => c.active !== false).length || 0
+)
+
+// --- Devis ---
+const totalQuotes = computed(() => quoteStore.quotes?.length || 0)
+const pendingQuotes = computed(() => 
+  quoteStore.quotes?.filter(q => q.status === 'pending').length || 0
+)
+
+// Pourcentages
 const inStockPercentage = computed(() =>
-  totalProducts.value > 0 ? Math.round((inStock.value / totalProducts.value) * 100) : 0
+  totalProducts.value > 0 ? Math.round((inStockCount.value / totalProducts.value) * 100) : 0
 )
 const activeCustomerPercentage = computed(() =>
   totalCustomers.value > 0 ? Math.round((activeCustomers.value / totalCustomers.value) * 100) : 0
@@ -128,14 +143,14 @@ const pendingQuotesPercentage = computed(() =>
   totalQuotes.value > 0 ? Math.round((pendingQuotes.value / totalQuotes.value) * 100) : 0
 )
 
+// Données des cartes (inchangé sauf les valeurs)
 const cardsData = computed(() => [
   {
     title: 'Produkte',
     value: totalProducts.value,
-    subtitle: `${inStock.value} auf Lager`,
+    subtitle: `${inStockCount.value} auf Lager`,
     description: 'Aktive Artikel',
     icon: 'mdi-medical-bag',
-    // Vert sombre → vert clair
     cardGradient: 'linear-gradient(135deg, #1B5E20 0%, #81C784 100%)',
     footerColor: '#C8E6C9',
     textColor: '#FFFFFF',
@@ -157,7 +172,6 @@ const cardsData = computed(() => [
     subtitle: `${activeCustomers.value} aktiv`,
     description: 'Gesamte Kundenbasis',
     icon: 'mdi-account-group',
-    // Bleu sombre → bleu clair
     cardGradient: 'linear-gradient(135deg, #0D47A1 0%, #64B5F6 100%)',
     footerColor: '#BBDEFB',
     textColor: '#FFFFFF',
@@ -179,7 +193,6 @@ const cardsData = computed(() => [
     subtitle: `${totalQuotes.value} insgesamt`,
     description: 'Ausstehende Anfragen',
     icon: 'mdi-file-document',
-    // Orange sombre → orange clair
     cardGradient: 'linear-gradient(135deg, #BF360C 0%, #FFB74D 100%)',
     footerColor: '#FFE0B2',
     textColor: '#FFFFFF',
@@ -199,9 +212,8 @@ const cardsData = computed(() => [
     title: 'Lagerwert',
     value: `${totalStockValue.value.toLocaleString()} €`,
     subtitle: `${Math.round(averageProductValue.value).toLocaleString()} € / Produkt`,
-    description: 'Gesamter Einkaufswert',
+    description: 'Gesamter Einkaufswert (Verkaufspreis)',
     icon: 'mdi-currency-eur',
-    // Violet sombre → violet clair
     cardGradient: 'linear-gradient(135deg, #4A148C 0%, #CE93D8 100%)',
     footerColor: '#E1BEE7',
     textColor: '#FFFFFF',

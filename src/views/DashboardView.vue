@@ -34,7 +34,7 @@
     <!-- Ligne unique pour les deux cartes : RecentTickets + MonthlySales -->
     <v-row>
       <!-- RecentTickets occupe 8/12 de la largeur -->
-      <v-col  cols="12" md="8" class="tall-card">
+      <v-col cols="12" md="8" class="tall-card">
         <RecentTickets />
       </v-col>
       <!-- MonthlySales occupe 4/12 de la largeur -->
@@ -48,7 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useProductStore } from '../stores/products'
+import { useProductStore } from '../stores/stock_manager_products'
 import { useCustomerStore } from '../stores/customers'
 import { useQuoteStore } from '../stores/quotes'
 import OverviewCards from '../components/dashboard/OverviewCards.vue'

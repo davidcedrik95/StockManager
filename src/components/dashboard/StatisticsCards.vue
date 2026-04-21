@@ -20,7 +20,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useProductStore } from '../../stores/products'
+import { useProductStore } from '../../stores/stock_manager_products'
 import RecentActivities from './RecentActivities.vue'
 import LowStockAlert from './LowStockAlert.vue'
 import PercentChart from './PercentChart.vue'

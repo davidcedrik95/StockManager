@@ -1,4 +1,3 @@
-<!-- src/components/dashboard/PercentChart.vue -->
 <template>
   <v-card rounded="lg" elevation="2" style="height: 100%;">
     <v-card-title class="text-h6 pa-3 bg-grey-lighten-4">
@@ -7,18 +6,17 @@
     <v-card-text class="pa-4 text-center">
       <canvas ref="chartCanvas" width="200" height="200"></canvas>
       <div class="chart-info mt-4">
-        <!-- Layout deux colonnes : gauche / droite -->
         <div class="legend-two-columns">
           <div class="legend-col legend-left">
-            <div v-for="item in leftItems" :key="item.cat" class="legend-item">
+            <div v-for="item in leftItems" :key="item.category" class="legend-item">
               <span class="dot" :style="{ backgroundColor: item.color }"></span>
-              <span class="ms-1">{{ item.cat }}: {{ item.pct }}%</span>
+              <span class="ms-1">{{ item.category }}: {{ item.percentage }}%</span>
             </div>
           </div>
           <div class="legend-col legend-right">
-            <div v-for="item in rightItems" :key="item.cat" class="legend-item">
+            <div v-for="item in rightItems" :key="item.category" class="legend-item">
               <span class="dot" :style="{ backgroundColor: item.color }"></span>
-              <span class="ms-1">{{ item.cat }}: {{ item.pct }}%</span>
+              <span class="ms-1">{{ item.category }}: {{ item.percentage }}%</span>
             </div>
           </div>
         </div>
@@ -30,56 +28,84 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import { useProductStore } from '../../stores/stock_manager_products'
+
 Chart.register(...registerables)
 
+const productStore = useProductStore()
 const chartCanvas = ref(null)
 let chartInstance = null
 
-// Données fictives – à remplacer par les vraies données du store
-const categories = ['Cardio', 'Kraft', 'Zubehör', 'Gebrauchtgeräte']
-const percentages = [45, 30, 15, 10]
+// Palette de couleurs (ajustez selon vos besoins)
+const colorPalette = [
+  '#00b5e9', '#fa4251', '#00ad5f', '#ffc107', '#9c27b0', '#ff9800', '#795548', '#607d8b'
+]
 
-const chartData = {
-  labels: categories,
-  datasets: [
-    {
-      data: percentages,
-      backgroundColor: ['#00b5e9', '#fa4251', '#00ad5f', '#ffc107'],
-      borderWidth: 0,
-      cutout: '65%'
+// Calcul des catégories à partir des produits du store
+const categoryStats = computed(() => {
+  const products = productStore.products || []
+  const categoryCount = {}
+  products.forEach(p => {
+    const cat = p.category || 'Autre'
+    categoryCount[cat] = (categoryCount[cat] || 0) + 1
+  })
+  const total = products.length
+  if (total === 0) return []
+  return Object.entries(categoryCount).map(([category, count], idx) => ({
+    category,
+    count,
+    percentage: Math.round((count / total) * 100),
+    color: colorPalette[idx % colorPalette.length]
+  })).sort((a,b) => b.count - a.count) // tri décroissant
+})
+
+// Données pour Chart.js
+const chartData = computed(() => ({
+  labels: categoryStats.value.map(s => s.category),
+  datasets: [{
+    data: categoryStats.value.map(s => s.percentage),
+    backgroundColor: categoryStats.value.map(s => s.color),
+    borderWidth: 0,
+    cutout: '65%'
+  }]
+}))
+
+// Items pour la légende
+const items = computed(() => categoryStats.value.map(s => ({
+  cat: s.category,
+  pct: s.percentage,
+  color: s.color
+})))
+
+// Séparer en deux colonnes (gauche : première moitié, droite : seconde moitié)
+const leftItems = computed(() => items.value.slice(0, Math.ceil(items.value.length / 2)))
+const rightItems = computed(() => items.value.slice(Math.ceil(items.value.length / 2)))
+
+// Rendu du graphique
+const renderChart = () => {
+  if (!chartCanvas.value || categoryStats.value.length === 0) return
+  if (chartInstance) chartInstance.destroy()
+  chartInstance = new Chart(chartCanvas.value, {
+    type: 'doughnut',
+    data: chartData.value,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}%` } }
+      }
     }
-  ]
+  })
 }
 
-// Préparer la liste complète des éléments avec leur couleur
-const items = computed(() => 
-  categories.map((cat, i) => ({
-    cat,
-    pct: percentages[i],
-    color: chartData.datasets[0].backgroundColor[i]
-  }))
-)
-
-// Séparer en deux groupes : gauche (2 premiers) et droite (2 derniers)
-const leftItems = computed(() => items.value.slice(0, 2))
-const rightItems = computed(() => items.value.slice(2, 4))
-
 onMounted(() => {
-  if (chartCanvas.value) {
-    chartInstance = new Chart(chartCanvas.value, {
-      type: 'doughnut',
-      data: chartData,
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}%` } }
-        }
-      }
-    })
-  }
+  renderChart()
 })
+
+// Mettre à jour le graphique si les données du store changent
+import { watch } from 'vue'
+watch(categoryStats, () => renderChart(), { deep: true })
 </script>
 
 <style scoped>
@@ -93,8 +119,6 @@ canvas {
   max-width: 200px;
   margin: 0 auto;
 }
-
-/* Layout deux colonnes : gauche et droite */
 .legend-two-columns {
   display: flex;
   justify-content: space-between;

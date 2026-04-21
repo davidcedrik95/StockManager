@@ -1,49 +1,45 @@
-<!-- src/components/LowStockAlert.vue (version Pie Chart) -->
 <template>
   <v-card rounded="lg" elevation="2" style="height: 100%; display: flex; flex-direction: column;">
     <v-card-title class="text-h6 pa-3 bg-grey-lighten-4">
-      ⚠️ Niedriger Lagerbestand (≤ {{ lowStockThreshold }})
+      ⚠️ Produits en rupture de stock
     </v-card-title>
 
     <v-card-text class="pa-3" style="flex: 1;">
-      <!-- Message si aucun produit critique -->
-      <div v-if="lowStockProducts.length === 0" class="text-center pa-6 text-grey">
-        ✅ Keine Produkte mit niedrigem Bestand 
+      <div v-if="outOfStockProducts.length === 0" class="text-center pa-6 text-grey">
+        ✅ Aucun produit en rupture
       </div>
 
-      <!-- Pie chart + légende -->
       <div v-else>
+        <!-- Pie chart : répartition des ruptures par catégorie -->
         <canvas ref="pieChartCanvas" style="max-height: 220px; width: 100%;"></canvas>
-        
+
         <!-- Légende interactive -->
         <v-list density="compact" class="mt-2">
           <v-list-item
-            v-for="(product, index) in lowStockProducts"
+            v-for="(product, index) in outOfStockProducts"
             :key="product.id"
-            @click="handleReorder(product)"
+            @click="viewProduct(product)"
             style="cursor: pointer;"
           >
             <template v-slot:prepend>
-              <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: colors[index] }"></div>
+              <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: categoryColors[product.category] }"></div>
             </template>
             <v-list-item-title>
               {{ product.name }}
               <span class="text-caption text-grey">({{ product.brand }})</span>
             </v-list-item-title>
             <template v-slot:append>
-              <div class="font-weight-bold" :class="{ 'text-red': product.stock <= criticalThreshold }">
-                {{ product.stock }} St.
-              </div>
+              <v-chip color="error" size="x-small">Rupture</v-chip>
             </template>
           </v-list-item>
         </v-list>
       </div>
     </v-card-text>
 
-    <v-divider v-if="lowStockProducts.length > 0"></v-divider>
-    <v-card-actions v-if="lowStockProducts.length > 0" class="pa-2">
-      <v-btn color="warning" variant="tonal" block size="small" @click="handleBulkReorder">
-        Alle nachbestellen
+    <v-divider v-if="outOfStockProducts.length > 0"></v-divider>
+    <v-card-actions v-if="outOfStockProducts.length > 0" class="pa-2">
+      <v-btn color="warning" variant="tonal" block size="small" @click="viewAllOutOfStock">
+        Voir tous les produits en rupture
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -51,48 +47,58 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Chart, registerables } from 'chart.js'
+import { useProductStore } from '../../stores/stock_manager_products'
 
 Chart.register(...registerables)
 
-// Seuils
-const lowStockThreshold = 5
-const criticalThreshold = 2
+const router = useRouter()
+const productStore = useProductStore()
 
-// Données simulées (à remplacer par votre store)
-const allProducts = ref([
-  { id: 1, name: 'K700 Mill Tour Basic', brand: 'Ergo-Fit', stock: 2 },
-  { id: 2, name: 'CYCLE MED Cardio 4000', brand: 'Ergo-Fit', stock: 5 },
-  { id: 3, name: 'CYCLE 407 MED', brand: 'Ergo-Fit', stock: 3 }
-])
-
-const lowStockProducts = computed(() =>
-  allProducts.value.filter(p => p.stock <= lowStockThreshold)
+// Produits en rupture (in_stock = false)
+const outOfStockProducts = computed(() =>
+  (productStore.products || []).filter(p => p.in_stock === false || p.in_stock === 0)
 )
 
-// Génération de couleurs distinctes pour chaque secteur
-const colors = computed(() => {
-  return lowStockProducts.value.map((p, idx) => {
-    const hue = (idx * 137.5) % 360 // golden angle
-    return `hsl(${hue}, 70%, 60%)`
+// Couleurs par catégorie (cohérent avec PercentChart)
+const categoryColors = {
+  'cardio': '#00b5e9',
+  'strength': '#fa4251',
+  'rehabilitation': '#00ad5f',
+  'accessories': '#ffc107',
+  'Autre': '#9c27b0'
+}
+
+// Données pour le pie chart : regrouper par catégorie
+const categoryStats = computed(() => {
+  const groups = {}
+  outOfStockProducts.value.forEach(p => {
+    const cat = p.category || 'Autre'
+    groups[cat] = (groups[cat] || 0) + 1
   })
+  return Object.entries(groups).map(([category, count]) => ({
+    category,
+    count,
+    color: categoryColors[category] || '#607d8b'
+  }))
 })
 
 const pieChartCanvas = ref(null)
 let chartInstance = null
 
 const renderPieChart = () => {
-  if (!pieChartCanvas.value || lowStockProducts.value.length === 0) return
+  if (!pieChartCanvas.value || categoryStats.value.length === 0) return
   if (chartInstance) chartInstance.destroy()
 
   const ctx = pieChartCanvas.value.getContext('2d')
   chartInstance = new Chart(ctx, {
     type: 'pie',
     data: {
-      labels: lowStockProducts.value.map(p => p.name),
+      labels: categoryStats.value.map(s => s.category),
       datasets: [{
-        data: lowStockProducts.value.map(p => p.stock),
-        backgroundColor: colors.value,
+        data: categoryStats.value.map(s => s.count),
+        backgroundColor: categoryStats.value.map(s => s.color),
         borderWidth: 2,
         borderColor: '#fff'
       }]
@@ -108,30 +114,27 @@ const renderPieChart = () => {
               const value = context.raw
               const total = context.dataset.data.reduce((a, b) => a + b, 0)
               const percentage = ((value / total) * 100).toFixed(1)
-              return `${label}: ${value} Stück (${percentage}%)`
+              return `${label}: ${value} produit(s) (${percentage}%)`
             }
           }
         },
-        legend: {
-          display: false // On utilise une légende personnalisée
-        }
+        legend: { display: false }
       }
     }
   })
 }
 
-const handleReorder = (product) => {
-  alert(`Bestellung für ${product.name} (Bestand: ${product.stock} Stück) wird ausgelöst.`)
+const viewProduct = (product) => {
+  // Redirige vers la page de détail du produit (à adapter si vous avez une route)
+  router.push(`/products/${product.id}`)
 }
 
-const handleBulkReorder = () => {
-  const names = lowStockProducts.value.map(p => p.name).join('\n')
-  alert(`Alle Produkte nachbestellen:\n${names}`)
+const viewAllOutOfStock = () => {
+  // Par exemple, redirige vers la liste des produits avec un filtre "rupture"
+  router.push('/products?filter=out_of_stock')
 }
 
-watch(lowStockProducts, () => {
-  renderPieChart()
-}, { deep: true })
+watch(categoryStats, () => renderPieChart(), { deep: true })
 
 onMounted(() => {
   renderPieChart()
