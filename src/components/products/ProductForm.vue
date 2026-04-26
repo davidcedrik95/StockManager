@@ -284,6 +284,19 @@
 
       </v-form>
     </v-card>
+
+    <!-- JUSTE AVANT LA FERMETURE DU v-container -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      timeout="3000"
+      location="top end"
+    >
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn variant="text" icon="mdi-close" @click="snackbar.show = false"></v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 
   <!-- FLOATING HELP BUTTON -->
@@ -311,6 +324,12 @@ const valid = ref(false)
 const submitting = ref(false)
 const formRef = ref(null)
 const guideDrawer = ref(false)
+
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'success'
+})
 
 // Produktstammdaten (erweitert)
 const product = reactive({
@@ -406,16 +425,26 @@ const submit = async () => {
     )
 
     if (response.data.success) {
-      // Erfolg: Zurück zum Dashboard
-      router.push('/dashboard')
-      // Optionale Erfolgsmeldung (z. B. NotificationStore)
-      // notificationStore.showSuccess('Produkt erfolgreich erstellt', 'Erfolg', 5000)
+      // Affichage du message de succès
+      snackbar.value = {
+        show: true,
+        text: '✅ Das Produkt wurde erfolgreich erstellt !',
+        color: 'success'
+      }
+      // Redirection après 2.5 secondes (laisse le temps de voir la notification)
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2500)
     } else {
-      throw new Error(response.data.error || 'Unbekannter Fehler')
+      throw new Error(response.data.error || 'Erreur inconnue')
     }
   } catch (error) {
-    console.error('Fehler beim Erstellen des Produkts:', error)
-    alert('Fehler beim Erstellen des Produkts: ' + error.message)
+    console.error('Beim Erstellen des Produkts ist ein Fehler aufgetreten:', error)
+    snackbar.value = {
+      show: true,
+      text: `❌ Fehler : ${error.message}`,
+      color: 'error'
+    }
   } finally {
     submitting.value = false
   }
