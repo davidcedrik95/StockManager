@@ -285,7 +285,26 @@
       </v-form>
     </v-card>
 
-    <!-- JUSTE AVANT LA FERMETURE DU v-container -->
+    <!-- GANZSEITIGER LOADER BEI WEITERLEITUNG (MODERNER KREIS) -->
+    <v-overlay
+      v-model="redirecting"
+      class="align-center justify-center"
+      persistent
+      scrim="rgba(0,0,0,0.7)"
+      :z-index="9999"
+    >
+      <div class="text-center">
+        <v-progress-circular
+          indeterminate
+          size="80"
+          color="primary"
+          width="6"
+        ></v-progress-circular>
+        <div class="text-h6 mt-4 text-white">Weiterleitung zum Dashboard...</div>
+      </div>
+    </v-overlay>
+
+    <!-- Snackbar für Erfolg / Fehler -->
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
@@ -322,6 +341,7 @@ const router = useRouter()
 
 const valid = ref(false)
 const submitting = ref(false)
+const redirecting = ref(false)     // ✅ NEU: Steuert den modernen Loader während der Weiterleitung
 const formRef = ref(null)
 const guideDrawer = ref(false)
 
@@ -425,26 +445,32 @@ const submit = async () => {
     )
 
     if (response.data.success) {
-      // Affichage du message de succès
+      // Erfolgsmeldung anzeigen
       snackbar.value = {
         show: true,
-        text: '✅ Das Produkt wurde erfolgreich erstellt !',
+        text: '✅ Das Produkt wurde erfolgreich erstellt!',
         color: 'success'
       }
-      // Redirection après 2.5 secondes (laisse le temps de voir la notification)
+
+      // ✅ Modernen Loader aktivieren (während der Wartezeit bis zur Weiterleitung)
+      redirecting.value = true
+
+      // Nach 2 Sekunden zum Dashboard navigieren
       setTimeout(() => {
         router.push('/dashboard')
-      }, 2500)
+        // redirecting wird automatisch zurückgesetzt, wenn die Komponente zerstört wird
+      }, 2000)
     } else {
-      throw new Error(response.data.error || 'Erreur inconnue')
+      throw new Error(response.data.error || 'Unbekannter Fehler')
     }
   } catch (error) {
-    console.error('Beim Erstellen des Produkts ist ein Fehler aufgetreten:', error)
+    console.error('Fehler beim Erstellen des Produkts:', error)
     snackbar.value = {
       show: true,
-      text: `❌ Fehler : ${error.message}`,
+      text: `❌ Fehler: ${error.message}`,
       color: 'error'
     }
+    redirecting.value = false   // Loader ggf. wieder ausblenden
   } finally {
     submitting.value = false
   }
