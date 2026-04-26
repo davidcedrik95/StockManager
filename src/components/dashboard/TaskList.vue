@@ -28,9 +28,11 @@ const tasks = ref([
   { name: "Review UI concepts", time: "02:00 PM", color: "primary" },
   { name: "Deploy to staging", time: "05:00 PM", color: "success" }
 ])
+
 const visibleCount = ref(3)
 const visibleTasks = computed(() => tasks.value.slice(0, visibleCount.value))
 const loadMore = () => { visibleCount.value += 2 }
+
 </script>
 
 <style scoped>

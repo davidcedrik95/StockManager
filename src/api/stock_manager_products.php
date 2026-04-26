@@ -1,5 +1,5 @@
 <?php
-// api/products.php
+// api/stock_manager_products.php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -9,11 +9,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once __DIR__ . '/config/database.php'; // fournit $dbh (PDO)
+require_once __DIR__ . '/database_connect.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 
-// Validation basique
 if (!$input || !isset($input['article'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Données du produit manquantes']);
@@ -25,7 +24,6 @@ $specifics = $input['specifics'] ?? [];
 $shipping = $input['shipping'] ?? [];
 $images = $input['images'] ?? [];
 
-// Validation des champs obligatoires
 $required = ['name', 'brand', 'category', 'price', 'main_image', 'article_type', 'article_number'];
 foreach ($required as $field) {
     if (empty($article[$field])) {
@@ -36,9 +34,8 @@ foreach ($required as $field) {
 }
 
 try {
-    $dbh->beginTransaction();
+    $pdo->beginTransaction();
 
-    // 1. Insertion dans la table `articles`
     $sql = "INSERT INTO articles (
                 name, brand, category, price, main_image, article_type, article_number,
                 color, warranty_years, weight_capacity, power_supply, application_area,
@@ -49,7 +46,7 @@ try {
                 :in_stock, :is_new, :best_seller, :description
             )";
 
-    $stmt = $dbh->prepare($sql);
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':name' => $article['name'],
         ':brand' => $article['brand'],
@@ -69,9 +66,8 @@ try {
         ':description' => $article['description'] ?? null
     ]);
 
-    $articleId = $dbh->lastInsertId();
+    $articleId = $pdo->lastInsertId();
 
-    // 2. Insertion des spécificités selon le type d'article
     if ($article['article_type'] === 'treadmill') {
         $sql = "INSERT INTO treadmills (
                     article_id, motor_power, max_speed, max_inclination, display_type,
@@ -84,7 +80,7 @@ try {
                     :has_heart_rate_monitor, :has_wifi, :has_speaker, :power_range, :display_info,
                     :programs_info, :comfort_features
                 )";
-        $stmt = $dbh->prepare($sql);
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':article_id' => $articleId,
             ':motor_power' => $specifics['motor_power'] ?? null,
@@ -112,7 +108,7 @@ try {
                     :article_id, :resistance_type, :max_resistance, :pedal_type, :seat_adjustment,
                     :handlebar_adjustment, :has_backrest, :has_pedal_straps, :console_features
                 )";
-        $stmt = $dbh->prepare($sql);
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':article_id' => $articleId,
             ':resistance_type' => $specifics['resistance_type'] ?? null,
@@ -126,11 +122,10 @@ try {
         ]);
     }
 
-    // 3. Insertion des images supplémentaires
     if (!empty($images)) {
         $sql = "INSERT INTO article_images (article_id, image_url, image_order, image_type, article_name)
                 VALUES (:article_id, :image_url, :image_order, :image_type, :article_name)";
-        $stmt = $dbh->prepare($sql);
+        $stmt = $pdo->prepare($sql);
         foreach ($images as $image) {
             $stmt->execute([
                 ':article_id' => $articleId,
@@ -142,24 +137,23 @@ try {
         }
     }
 
-    // 4. Insertion des règles de livraison
     if (!empty($shipping)) {
         $sql = "INSERT INTO shipping_rules (
                     article_id, shipping_cost, free_shipping_threshold, shipping_method, estimated_delivery_days
                 ) VALUES (
                     :article_id, :shipping_cost, :free_shipping_threshold, :shipping_method, :estimated_delivery_days
                 )";
-        $stmt = $dbh->prepare($sql);
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':article_id' => $articleId,
-            ':shipping_cost' => $shipping['shipping_cost'] ?? null,
-            ':free_shipping_threshold' => $shipping['free_shipping_threshold'] ?? null,
+            ':shipping_cost' => $shipping['shipping_cost'] !== '' ? $shipping['shipping_cost'] : null,
+            ':free_shipping_threshold' => $shipping['free_shipping_threshold'] !== '' ? $shipping['free_shipping_threshold'] : null,
             ':shipping_method' => $shipping['shipping_method'] ?? null,
-            ':estimated_delivery_days' => $shipping['estimated_delivery_days'] ?? null
+            ':estimated_delivery_days' => $shipping['estimated_delivery_days'] !== '' ? $shipping['estimated_delivery_days'] : null
         ]);
     }
 
-    $dbh->commit();
+    $pdo->commit();
 
     echo json_encode([
         'success' => true,
@@ -169,11 +163,16 @@ try {
     ]);
 
 } catch (Exception $e) {
-    $dbh->rollBack();
+    if ($pdo && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Erreur lors de l\'insertion : ' . $e->getMessage()
+        'error' => 'SQL-Fehler: ' . $e->getMessage(),
+        'code' => $e->getCode(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
     ]);
 }
 ?>
