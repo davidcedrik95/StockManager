@@ -1,19 +1,31 @@
 <template>
   <v-card rounded="lg" elevation="2" style="height: 100%; display: flex; flex-direction: column;">
-    <v-card-title class="text-h6 pa-3 bg-grey-lighten-4">
-      ⚠️ Produits en rupture de stock
+    <!-- Modernisierte Kopfzeile -->
+    <v-card-title class="d-flex justify-space-between align-center bg-grey-lighten-4 px-4 py-3">
+      <span class="text-h6 font-weight-semibold">
+        Niedriger Lagerbestand
+      </span>
+
+      <div class="d-flex align-center ga-1">
+        <v-btn icon variant="text" size="small" color="grey-darken-1">
+          <v-icon size="20">mdi-fullscreen</v-icon>
+        </v-btn>
+        <v-btn icon variant="text" size="small" color="grey-darken-1">
+          <v-icon size="20">mdi-refresh</v-icon>
+        </v-btn>
+      </div>
     </v-card-title>
 
     <v-card-text class="pa-3" style="flex: 1;">
       <div v-if="outOfStockProducts.length === 0" class="text-center pa-6 text-grey">
-        ✅ Aucun produit en rupture
+        ✅ Keine Produkte ausverkauft
       </div>
 
       <div v-else>
-        <!-- Pie chart : répartition des ruptures par catégorie -->
+        <!-- Kreisdiagramm: Verteilung der Ausverkäufe nach Kategorie -->
         <canvas ref="pieChartCanvas" style="max-height: 220px; width: 100%;"></canvas>
 
-        <!-- Légende interactive -->
+        <!-- Interaktive Legende -->
         <v-list density="compact" class="mt-2">
           <v-list-item
             v-for="(product, index) in outOfStockProducts"
@@ -29,7 +41,7 @@
               <span class="text-caption text-grey">({{ product.brand }})</span>
             </v-list-item-title>
             <template v-slot:append>
-              <v-chip color="error" size="x-small">Rupture</v-chip>
+              <v-chip color="error" size="x-small">Ausverkauft</v-chip>
             </template>
           </v-list-item>
         </v-list>
@@ -39,7 +51,7 @@
     <v-divider v-if="outOfStockProducts.length > 0"></v-divider>
     <v-card-actions v-if="outOfStockProducts.length > 0" class="pa-2">
       <v-btn color="warning" variant="tonal" block size="small" @click="viewAllOutOfStock">
-        Voir tous les produits en rupture
+        Alle ausverkauften Produkte anzeigen
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -56,12 +68,12 @@ Chart.register(...registerables)
 const router = useRouter()
 const productStore = useProductStore()
 
-// Produits en rupture (in_stock = false)
+// Ausverkaufte Produkte (in_stock = false)
 const outOfStockProducts = computed(() =>
   (productStore.products || []).filter(p => p.in_stock === false || p.in_stock === 0)
 )
 
-// Couleurs par catégorie (cohérent avec PercentChart)
+// Farben je Kategorie (konsistent mit PercentChart)
 const categoryColors = {
   'cardio': '#00b5e9',
   'strength': '#fa4251',
@@ -70,7 +82,7 @@ const categoryColors = {
   'Autre': '#9c27b0'
 }
 
-// Données pour le pie chart : regrouper par catégorie
+// Daten für das Kreisdiagramm: Gruppierung nach Kategorie
 const categoryStats = computed(() => {
   const groups = {}
   outOfStockProducts.value.forEach(p => {
@@ -114,7 +126,7 @@ const renderPieChart = () => {
               const value = context.raw
               const total = context.dataset.data.reduce((a, b) => a + b, 0)
               const percentage = ((value / total) * 100).toFixed(1)
-              return `${label}: ${value} produit(s) (${percentage}%)`
+              return `${label}: ${value} Produkt(e) (${percentage}%)`
             }
           }
         },
@@ -125,12 +137,12 @@ const renderPieChart = () => {
 }
 
 const viewProduct = (product) => {
-  // Redirige vers la page de détail du produit (à adapter si vous avez une route)
+  // Leitet zur Produktdetailseite weiter (ggf. anpassen)
   router.push(`/products/${product.id}`)
 }
 
 const viewAllOutOfStock = () => {
-  // Par exemple, redirige vers la liste des produits avec un filtre "rupture"
+  // Z. B. Weiterleitung zur Produktliste mit Filter "ausverkauft"
   router.push('/products?filter=out_of_stock')
 }
 

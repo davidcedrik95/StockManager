@@ -1,7 +1,20 @@
 <template>
   <v-card rounded="lg" elevation="2" style="height: 100%;">
-    <v-card-title class="text-h6 pa-3 bg-grey-lighten-4">
-      Produkte nach Kategorie (%)
+     <!-- Header modernisé -->
+    <v-card-title class="d-flex justify-space-between align-center bg-grey-lighten-4 px-4 py-3">
+      <span class="text-h6 font-weight-semibold">
+        Produktverteilung
+      </span>
+
+      <div class="d-flex align-center ga-1">
+        <v-btn icon variant="text" size="small" color="grey-darken-1">
+          <v-icon size="20">mdi-fullscreen</v-icon>
+        </v-btn>
+        <v-btn icon variant="text" size="small" color="grey-darken-1">
+          <v-icon size="20">mdi-refresh</v-icon>
+        </v-btn>
+      </div>
+
     </v-card-title>
     <v-card-text class="pa-4 text-center">
       <canvas ref="chartCanvas" width="200" height="200"></canvas>

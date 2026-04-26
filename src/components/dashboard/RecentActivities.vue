@@ -10,16 +10,10 @@
 
       <div class="d-flex align-center ga-1">
         <v-btn icon variant="text" size="small" color="grey-darken-1">
-          <v-icon size="20">mdi-cog-outline</v-icon>
-        </v-btn>
-        <v-btn icon variant="text" size="small" color="grey-darken-1">
           <v-icon size="20">mdi-fullscreen</v-icon>
         </v-btn>
         <v-btn icon variant="text" size="small" color="grey-darken-1">
           <v-icon size="20">mdi-refresh</v-icon>
-        </v-btn>
-        <v-btn icon variant="text" size="small" color="grey-darken-1">
-          <v-icon size="20">mdi-delete-outline</v-icon>
         </v-btn>
       </div>
     </v-card-title>

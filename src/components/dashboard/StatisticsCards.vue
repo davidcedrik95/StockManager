@@ -3,7 +3,7 @@
   <v-row>
       <!-- Carte 1 : Graphique en pourcentage -->
     <v-col cols="12" md="4" class="tall-card">
-      <PercentChart />
+      <ProductCategory />
     </v-col>
 
     <!-- Carte 2 : Dernières activités -->
@@ -23,7 +23,7 @@ import { computed } from 'vue'
 import { useProductStore } from '../../stores/stock_manager_products'
 import RecentActivities from './RecentActivities.vue'
 import LowStockAlert from './LowStockAlert.vue'
-import PercentChart from './PercentChart.vue'
+import ProductCategory from './ProductCategory.vue'
 
 const productStore = useProductStore()
 const totalProducts = computed(() => productStore.products?.length || 0)
